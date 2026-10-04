@@ -1,7 +1,9 @@
 
 const transactionModel=require("../models/transaction.model")
 const accountModel=require("../models/accounts.model")
-
+const ledgerModel=require("../models/ledger.model")
+const emailService=require('../services/email.service')
+const mongoose =require('mongoose')
 
 
 exports.createTransaction = async(req,res)=>{
@@ -15,19 +17,19 @@ exports.createTransaction = async(req,res)=>{
         })
     }
 
-    const IsFromAccountExists=await accountModel.findOne({_id:fromAccount})
+    const fromUserAccount=await accountModel.findOne({userId:fromAccount})
 
-    const IsToAccountExists=await accountModel.findOne({_id:toAccount})
+    const toUserAccount=await accountModel.findOne({userId:toAccount})
 
 
 
-    if(!IsFromAccountExists||!IsToAccountExists){
+    if(!fromUserAccount||!toUserAccount){
         return res.status(400).json({
             message:"fromAccount,toAccount should be valid For Making Transaction"
         })
     }
 
-    if (IsFromAccountExists.status !== "ACTIVE" ||IsToAccountExists.status !== "ACTIVE") {
+    if (fromUserAccount.status !== "ACTIVE" ||toUserAccount.status !== "ACTIVE") {
         return res.status(400).json({
             message: "fromAccount and toAccount should be active for making a transaction"
         });
@@ -64,17 +66,60 @@ exports.createTransaction = async(req,res)=>{
         }
     }
 
+
+   const balance = await fromUserAccount.getBalance();
+
+    if (balance<amount){
+        return res.status(400).json({
+            message:`Insufficient Balance , current Balance Is ${balance},Requested amount to send is ${amount}`
+        })
+    }
+
+
+    const session=await mongoose.startSession()
+
+    session.startTransaction()
+
+
+    const transaction=await transactionModel.create({
+        fromAccount,
+        toAccount,
+        idempotencyKey,
+        amount,
+        status:"PENDING"
+    },{session})
+
+    const debitLedgerEntry=await ledgerModel.create({
+        account:fromAccount,
+        transaction:transaction._id,
+        amount,
+        type:"DEBIT"
+    },{session})
+
+    const creditLedgerEntry=await ledgerModel.create({
+        account:toAccount,
+        transaction:transaction._id,
+        amount,
+        type:"CREDIT"
+    },{session})
+
+
+
+  transaction.status="COMPLETED"
+
+   await transaction.save({session})
+
+
+   await session.commitTransaction()
+   session.endSession()
+
     
 
+   await emailService.sendTransactionEmail(req.user.email,req.user.name,amount,toAccount)
 
-    
-
-
-
-
-
-
-
-
+   return res.status(201).json({
+    message:"transation completed successfully",
+    transaction
+   })
 
 }
