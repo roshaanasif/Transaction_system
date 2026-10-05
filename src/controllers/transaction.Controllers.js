@@ -81,27 +81,27 @@ exports.createTransaction = async(req,res)=>{
     session.startTransaction()
 
 
-    const transaction=await transactionModel.create({
+    const transaction=new transactionModel({
         fromAccount,
         toAccount,
         idempotencyKey,
         amount,
         status:"PENDING"
-    },{session})
+    })
 
-    const debitLedgerEntry=await ledgerModel.create({
+    const debitLedgerEntry=await ledgerModel.create([{
         account:fromAccount,
         transaction:transaction._id,
         amount,
         type:"DEBIT"
-    },{session})
+    }],{session})
 
-    const creditLedgerEntry=await ledgerModel.create({
+    const creditLedgerEntry=await ledgerModel.create([{
         account:toAccount,
         transaction:transaction._id,
         amount,
         type:"CREDIT"
-    },{session})
+    }],{session})
 
 
 
