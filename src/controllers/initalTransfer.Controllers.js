@@ -18,7 +18,7 @@ exports.initalFundsTransfer=async(req,res)=>{
 
     const toUserAccount=await accountModel.findOne({userId:toAccount})
 
-
+    
     if(!toUserAccount){
         return res.status(400).json({
             message:"toAccount should be valid For Making Transaction"
@@ -43,7 +43,7 @@ const session=await mongoose.startSession()
 
     const transaction=new transactionModel({
         fromAccount:fromSystemAccount._id,
-        toAccount,
+        toAccount:toUserAccount._id,
         idempotencyKey,
         amount,
         status:"PENDING"
@@ -57,7 +57,7 @@ const session=await mongoose.startSession()
     }],{session})
 
     const creditLedgerEntry=await ledgerModel.create([{
-        account:toAccount,
+        account:toUserAccount._id,
         transaction:transaction._id,
         amount,
         type:"CREDIT"

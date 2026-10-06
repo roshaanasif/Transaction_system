@@ -41,25 +41,25 @@ exports.createTransaction = async(req,res)=>{
 
     if(isTransactionAlreadyExists){
 
-        if(isTransactionAlreadyExists.status="COMPLETED"){
+        if(isTransactionAlreadyExists.status==="COMPLETED"){
             return res.status(200).json({
                 message:"Transaction already processed",
                 transaction:isTransactionAlreadyExists
             })
         }
 
-        if(isTransactionAlreadyExists.status="PENDING"){
+        if(isTransactionAlreadyExists.status==="PENDING"){
             return res.status(200).json({
                 message:"Transaction is still processing",
             })
         }
 
-        if(isTransactionAlreadyExists.status="FAILED"){
+        if(isTransactionAlreadyExists.status==="FAILED"){
             return res.status(500).json({
                 message:"Transaction processing failed,TRY AGAIN",
             })
         }
-        if(isTransactionAlreadyExists.status="REVERSED"){
+        if(isTransactionAlreadyExists.status==="REVERSED"){
             return res.status(500).json({
                 message:"Transaction was reversed ,TRY AGAIN",
             })
@@ -81,33 +81,34 @@ exports.createTransaction = async(req,res)=>{
     session.startTransaction()
 
 
-    const transaction=new transactionModel({
-        fromAccount,
-        toAccount,
+    const transaction=await transactionModel.create([{
+        fromAccount:fromUserAccount._id,
+        toAccount:toUserAccount._id,
         idempotencyKey,
         amount,
         status:"PENDING"
-    })
+    }],{session})
 
     const debitLedgerEntry=await ledgerModel.create([{
-        account:fromAccount,
+        account:fromUserAccount._id,
         transaction:transaction._id,
         amount,
         type:"DEBIT"
     }],{session})
 
     const creditLedgerEntry=await ledgerModel.create([{
-        account:toAccount,
+        account:toUserAccount._id,
         transaction:transaction._id,
         amount,
         type:"CREDIT"
     }],{session})
 
 
+    await transaction.findOneAndUpdate({_id:transaction._id},{status:"COMPLETED"},{session})
 
-  transaction.status="COMPLETED"
+//   transaction.status="COMPLETED"
 
-   await transaction.save({session})
+//    await transaction.save({session})
 
 
    await session.commitTransaction()
@@ -115,7 +116,7 @@ exports.createTransaction = async(req,res)=>{
 
     
 
-   await emailService.sendTransactionEmail(req.user.email,req.user.name,amount,toAccount)
+//    await emailService.sendTransactionEmail(req.user.email,req.user.name,amount,toAccount)
 
    return res.status(201).json({
     message:"transation completed successfully",

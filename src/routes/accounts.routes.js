@@ -7,6 +7,9 @@ const middleware =require('../middleware/auth.middleware')
 
 router.post("/",middleware.authMiddleware,accountsControllers.createAccountController)
 
+router.get("/",middleware.authMiddleware,accountsControllers.getAccountController)
+
+router.get("/balance/:accountId",middleware.authMiddleware,accountsControllers.getAccountBalanceController)
 
 
 

@@ -64,7 +64,7 @@ userAccount.methods.getBalance=async function(){
 
         {$project:{
             _id:0,
-            balance:{$subtract:["$totalDebit","$totalCredit"]}
+            balance:{$subtract:["$totalCredit","$totalDebit"]}
         }}
     ])
 
@@ -79,4 +79,3 @@ const accountModel=mongoose.model("account",userAccount)
 
 
 module.exports=accountModel;
-
