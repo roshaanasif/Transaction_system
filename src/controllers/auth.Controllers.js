@@ -1,4 +1,5 @@
 const userModel=require("../models/user.model")
+const tokenModel=require("../models/tokenBlacklisting.model")
 const config=require(".././config/config")
 const jwt =require('jsonwebtoken')
 const emailService=require("../services/email.service")
@@ -88,4 +89,29 @@ console.log("User password hash:", user.password);
         },
         token
     })
+}
+
+exports.userLogoutController=async(req,res)=>{
+    
+
+     const token =req.cookies.Jwt_Token || req.headers.authorization.split(" ")[1]
+
+
+
+     if(!token){
+        return res.status(400).json({
+            message:"unauthorized Access, Token is Missing"
+        })
+     }
+
+    res.clearCookie("Jwt_Token");
+
+     await tokenModel.create({
+        token:token
+     })
+
+    return res.status(200).json({
+            message:"user Logout Successfully"
+        })
+
 }

@@ -1,4 +1,5 @@
 const userModel=require('.././models/user.model')
+const tokenModel=require("../models/tokenBlacklisting.model")
 const config=require(".././config/config")
 const jwt=require('jsonwebtoken')
 
@@ -12,6 +13,14 @@ const authMiddleware=async(req,res,next)=>{
     if(!token){
         return res.status(401).json({
             message:"unAthourized Access,Token Is Missing"
+        })
+    }
+
+    const isBlacklisted=await tokenModel.findOne({token})
+
+    if(isBlacklisted){
+         return res.status(401).json({
+            message:"unAthourized Access,Token Is Inavalid"
         })
     }
 
@@ -40,6 +49,14 @@ const systemAuthMiddleware=async(req,res,next)=>{
     if(!token){
         return res.status(403).json({
             message:"Forbidden Access"
+        })
+    }
+
+    const isBlacklisted=await tokenModel.findOne({token})
+
+    if(isBlacklisted){
+         return res.status(401).json({
+            message:"unAthourized Access,Token Is Inavalid"
         })
     }
 
