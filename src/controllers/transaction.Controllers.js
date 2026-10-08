@@ -106,10 +106,6 @@ exports.createTransaction = async(req,res)=>{
 
     await transaction.findOneAndUpdate({_id:transaction._id},{status:"COMPLETED"},{session})
 
-//   transaction.status="COMPLETED"
-
-//    await transaction.save({session})
-
 
    await session.commitTransaction()
    session.endSession()
@@ -123,4 +119,97 @@ exports.createTransaction = async(req,res)=>{
     transaction
    })
 
+}
+
+
+
+
+exports.getTransactionHistory=async(req,res)=>{
+
+    const {accountId}=req.params
+    const {from,to}=req.query
+
+    const user=req.user
+
+    const account=await accountModel.findOne({
+         _id:accountId,
+        userId:user._id
+    })
+    
+    if(!account){
+        return res.status(400).json({
+            message:"Account not found for the user "
+        })
+    }
+    
+    let query={
+        $or: [
+        { fromAccount: accountId },
+        { toAccount: accountId }
+       ],
+        status: "COMPLETED",
+    }
+
+
+    if(from || to){
+        if(from && to){
+
+            if (new Date(from) > new Date(to)) {
+                return res.status(400).json({
+                    message: "From date cannot be greater than to date"
+                });
+            }
+            
+            query.createdAt = {
+                $gte: new Date(from)
+            };
+
+             const endDate = new Date(to);
+            endDate.setDate(endDate.getDate()+1)
+    
+            // if using lte
+            // endDate.setHours(23, 59, 59, 999);
+    
+    
+           query.createdAt={
+            ...query.createdAt,
+            $lt:endDate
+           }
+    
+        }else{
+        return res.status(400).json({
+            message:"Date RANGE is in complete"
+        })
+        }
+    }else{
+
+           const now = new Date();
+
+        const startOfMonth = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            1
+        );
+
+        const startOfNextMonth = new Date(
+            now.getFullYear(),
+            now.getMonth() + 1,
+            1
+        );
+
+        query.createdAt = {
+            $gte: startOfMonth,
+            $lt: startOfNextMonth
+        };
+    }
+
+
+    const transactions=await transactionModel.find(query)
+
+    return res.status(200).json({
+            message:"transactions fetched successfully",
+            transactions:transactions
+        })
+
+    
 }
